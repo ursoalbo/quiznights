@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ΔΕΝ ΠΑΣ ΓΙΑ ΨΑΡΕΜΑ ΚΑΛΥΤΕΡΑ;</title>
+    <style>
+        :root {
+            --primary-color: #e53935;
+            --background-color: #f4f4f4;
+            --scoreboard-bg: #121212;
+            --text-color: #ffffff;
+            --box-width: 250px; /* Wider box for team names */
+            --bar-height: 80px; /* Taller bars */
+            --score-font-size: 32px; /* Larger score font */
+            --team-name-font-size: 24px; /* Larger team name font */
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px; /* Wider container for 16:9 screens */
+            margin: auto;
+        }
+
+        input, button {
+            margin: 5px 0;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .scoreboard {
+            background-color: var(--scoreboard-bg);
+            color: var(--text-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .bar-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px; /* Increased spacing between bars */
+            width: 100%;
+        }
+
+        .name-box, .score-box {
+            height: var(--bar-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .name-box {
+            width: var(--box-width); /* Wider box for team names */
+            justify-content: flex-start;
+            overflow: hidden;
+        }
+
+        .team-name {
+            font-size: var(--team-name-font-size);
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .crown-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px; /* Space between crown and team name */
+            display: none; /* Hidden by default */
+        }
+
+        .bar-wrapper {
+            flex-grow: 1;
+            height: var(--bar-height);
+            display: flex;
+            align-items: center;
+            margin: 0 20px; /* Increased spacing around bars */
+        }
+
+        .bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.5s ease-in-out;
+        }
+
+        /* Glow effect for the leading team's bar */
+        .bar.leader {
+            animation: pulse-glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.9);
+            }
+        }
+
+        .score-box {
+            width: 150px; /* Fixed width for score box */
+            justify-content: flex-end;
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle background for scores */
+            border-radius: 5px; /* Rounded corners for scores */
+            padding: 0 15px; /* More padding for scores */
+        }
+
+        .score {
+            font-size: var(--score-font-size);
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--primary-color); /* Make scores stand out */
+        }
+
+        .color-picker {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ΔΕΝ ΠΑΣ ΓΙΑ ΨΑΡΕΜΑ ΚΑΛΥΤΕΡΑ;</h1>
+        <label for="numTeams">ΑΡΙΘΜΟΣ ΟΜΑΔΩΝ:</label>
+        <input type="number" id="numTeams" min="1" max="100" value="2">
+        <button onclick="setupTeams()">SETUP ΟΜΑΔΩΝ</button>
+        <div id="teamSetup"></div>
+        <button onclick="calculateScores()">ΥΠΟΛΟΓΙΣΜΟΣ ΣΚΟΡ</button>
+        <button onclick="exportData()">Export Data</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+        <button onclick="document.getElementById('importFile').click()">Import Data</button>
+        <button onclick="clearAllScores()">Clear All Scores</button> <!-- New button -->
+    </div>
+
+    <script>
+        const colors = [
+            '#e53935', '#1e88e5', '#43a047', '#fdd835', '#ab47bc', '#7986cb', '#ffb74d', '#81c784', '#ff8a65', '#9575cd',
+            '#ffcc80', '#a5d6a7', '#ffab4c', '#ce93d8', '#bcaaa4', '#fff176', '#ba68c8', '#a1887f', '#ffee58', '#ec407a'
+        ];
+
+        // Load saved data on page load
+        window.onload = () => {
+            const savedData = localStorage.getItem('teamData');
+            if (savedData) {
+                const teams = JSON.parse(savedData);
+                document.getElementById('numTeams').value = teams.length;
+                setupTeams();
+                teams.forEach((team, index) => {
+                    document.getElementById(`teamName${index}`).value = team.name;
+                    document.getElementById(`teamScore${index}`).value = team.score;
+                    document.getElementById(`teamColor${index}`).value = team.color;
+                });
+            }
+        };
+
+        function setupTeams() {
+            const numTeams = document.getElementById('numTeams').value;
+            let teamSetupDiv = document.getElementById('teamSetup');
+            teamSetupDiv.innerHTML = '';
+            for (let i = 0; i < numTeams; i++) {
+                teamSetupDiv.innerHTML += `
+                    <label for="teamName${i}">Team ${i + 1} Name:</label>
+                    <input type="text" id="teamName${i}" placeholder="Team Name" required>
+                    <label for="teamScore${i}">Team ${i + 1} Score:</label>
+                    <input type="number" id="teamScore${i}" min="0" value="0" required>
+                    <label for="teamColor${i}">Team ${i + 1} Color:</label>
+                    <input type="color" id="teamColor${i}" value="${colors[i % colors.length]}">
+                `;
+            }
+        }
+
+        function calculateScores() {
+            const numTeams = document.getElementById('numTeams').value;
+            let teams = [];
+            for (let i = 0; i < numTeams; i++) {
+                const name = document.getElementById(`teamName${i}`).value;
+                const score = parseInt(document.getElementById(`teamScore${i}`).value, 10);
+                const color = document.getElementById(`teamColor${i}`).value;
+
+                if (!name || isNaN(score)) {
+                    alert("Please fill in all fields correctly.");
+                    return;
+                }
+
+                teams.push({ name, score, color });
+            }
+            teams.sort((a, b) => b.score - a.score);
+            saveData(teams); // Save data to localStorage
+            openScoreboard(teams);
+        }
+
+        function saveData(teams) {
+            localStorage.setItem('teamData', JSON.stringify(teams));
+        }
+
+        function exportData() {
+            const savedData = localStorage.getItem('teamData');
+            if (!savedData) {
+                alert("No data to export.");
+                return;
+            }
+            const blob = new Blob([savedData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'teamData.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target.result;
+                try {
+                    const teams = JSON.parse(data);
+                    localStorage.setItem('teamData', data);
+                    document.getElementById('numTeams').value = teams.length;
+                    setupTeams();
+                    teams.forEach((team, index) => {
+                        document.getElementById(`teamName${index}`).value = team.name;
+                        document.getElementById(`teamScore${index}`).value = team.score;
+                        document.getElementById(`teamColor${index}`).value = team.color;
+                    });
+                    alert("Data imported successfully!");
+                } catch (error) {
+                    alert("Invalid file format.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllScores() {
+            // Show confirmation dialog
+            const isConfirmed = confirm("Are you sure you want to clear all scores? This action cannot be undone.");
+            
+            if (isConfirmed) {
+                // Clear local storage
+                localStorage.removeItem('teamData');
+                
+                // Reset the UI
+                document.getElementById('numTeams').value = 2; // Reset to default number of teams
+                setupTeams(); // Reinitialize the team setup form
+                alert("All scores have been cleared.");
+            }
+        }
+
+        function openScoreboard(teams) {
+            // Open the scoreboard in full screen
+            let newWindow = window.open('', '_blank', 'fullscreen=yes');
+            newWindow.document.write(`
+                <html>
+                <head>
+                    <title>Scoreboard</title>
+                    <style>
+                        :root {
+                            --primary-color: #e53935;
+                            --background-color: #f4f4f4;
+                            --scoreboard-bg: #121212;
+                            --text-color: #ffffff;
+                            --box-width: 250px;
+                            --bar-height: 80px;
+                            --score-font-size: 32px;
+                            --team-name-font-size: 24px;
+                        }
+
+                        body {
+                            background-color: var(--scoreboard-bg);
+                            color: var(--text-color);
+                            font-family: Arial, sans-serif;
+                            margin: 0;
+                            padding: 0;
+                            height: 100vh;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                        }
+
+                        .scoreboard {
+                            width: 90%;
+                            max-width: 1600px; /* Wider for 16:9 screens */
+                            padding: 20px;
+                            border-radius: 10px;
+                            max-height: 90vh; /* Limit height to 90% of viewport */
+                            overflow-y: auto; /* Enable vertical scrolling */
+                        }
+
+                        .bar-container {
+                            display: flex;
+                            align-items: center;
+                            margin-bottom: 20px;
+                            width: 100%;
+                        }
+
+                        .name-box, .score-box {
+                            height: var(--bar-height);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 0 10px;
+                            box-sizing: border-box;
+                            flex-shrink: 0;
+                        }
+
+                        .name-box {
+                            width: var(--box-width);
+                            justify-content: flex-start;
+                            overflow: hidden;
+                        }
+
+                        .team-name {
+                            font-size: var(--team-name-font-size);
+                            font-weight: bold;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            max-width: 100%;
+                            display: flex;
+                            align-items: center;
+                        }
+
+                        .crown-icon {
+                            width: 24px;
+                            height: 24px;
+                            margin-right: 10px; /* Space between crown and team name */
+                            display: none; /* Hidden by default */
+                        }
+
+                        .bar-wrapper {
+                            flex-grow: 1;
+                            height: var(--bar-height);
+                            display: flex;
+                            align-items: center;
+                            margin: 0 20px;
+                        }
+
+                        .bar {
+                            height: 100%;
+                            background-color: var(--primary-color);
+                            transition: width 0.5s ease-in-out;
+                        }
+
+                        /* Glow effect for the leading team's bar */
+                        .bar.leader {
+                            animation: pulse-glow 1.5s infinite alternate;
+                        }
+
+                        @keyframes pulse-glow {
+                            0% {
+                                box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+                            }
+                            100% {
+                                box-shadow: 0 0 20px rgba(255, 255, 255, 0.9);
+                            }
+                        }
+
+                        .score-box {
+                            width: 150px;
+                            justify-content: flex-end;
+                            background-color: rgba(255, 255, 255, 0.1);
+                            border-radius: 5px;
+                            padding: 0 15px;
+                        }
+
+                        .score {
+                            font-size: var(--score-font-size);
+                            font-weight: bold;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            color: var(--primary-color);
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="scoreboard">
+                        ${teams.map((team, index) => `
+                            <div class="bar-container">
+                                <div class="name-box">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/2583/2583344.png" class="crown-icon" ${index === 0 ? 'style="display: block;"' : ''}>
+                                    <span class="team-name">${team.name}</span>
+                                </div>
+                                <div class="bar-wrapper">
+                                    <div class="bar ${index === 0 ? 'leader' : ''}" style="width: ${calculateBarWidth(team.score, teams[0].score)}%; background-color: ${team.color};"></div>
+                                </div>
+                                <div class="score-box">
+                                    <span class="score">${team.score}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button style="position: fixed; top: 10px; right: 10px; padding: 10px; background-color: var(--primary-color); color: var(--text-color); border: none; cursor: pointer;" onclick="window.close();">Close</button>
+                </body>
+                </html>
+            `);
+            newWindow.document.close();
+        }
+
+        function calculateBarWidth(score, maxScore) {
+            // Ensure the top team's bar is always 100% width
+            if (score === maxScore) {
+                return 100;
+            }
+            // Scale other bars proportionally
+            return (score / maxScore) * 100;
+        }
+    </script>
+</body>
+</html>
